@@ -1,0 +1,36 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="test/Program.cs">
+    <Files>
+      <File FileName="test/Program.cs" Line="141" Column="141" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Ardoq.csproj" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/ArdoqClient.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/packages.config" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/app.config" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Converters/ModelConverter.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/IModel.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/ModelService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/ComponentService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/Interface/IComponentService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/AttachmentService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Model.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Component.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Converters/ComponentConverter.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Reference.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/WorkspaceService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Workspace.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/WorkspaceBranch.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/WorkspaceBranchRequest.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/Interface/IWorkspaceService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Util/SyncRepository.cs" Line="1" Column="1" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore>
+      <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/test/Program.cs" line="311" column="1" />
+      <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/test/SyncRepository.cs" line="28" column="1" />
+      <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/test/Program.cs" line="325" column="1" />
+    </BreakpointStore>
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>
