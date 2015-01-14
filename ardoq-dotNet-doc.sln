@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ardoq-cecil-inspection", "test\ardoq-cecil-inspection.csproj", "{8C8B6171-CFEB-40ED-9561-B072F00D2877}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ardoq-cecil-inspection", "ardoq-cecil-inspection\ardoq-cecil-inspection.csproj", "{8C8B6171-CFEB-40ED-9561-B072F00D2877}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ardoq", "..\ardoq-csharp-client\Ardoq\Ardoq.csproj", "{352BBE05-D5AA-45E0-A327-90074B46064B}"
 EndProject
@@ -21,6 +21,6 @@ Global
 		{8C8B6171-CFEB-40ED-9561-B072F00D2877}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = test\ardoq-cecil-inspection.csproj
+		StartupItem = ardoq-cecil-inspection\ardoq-cecil-inspection.csproj
 	EndGlobalSection
 EndGlobal
