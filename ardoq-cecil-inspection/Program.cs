@@ -13,10 +13,8 @@ using System.Reflection;
 using System.IO;
 using CommandLine;
 using CommandLine.Text;
-using System.Linq.Expressions;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using System.Security.Cryptography;
+
 
 namespace Ardoq
 {
@@ -48,13 +46,22 @@ namespace Ardoq
 			HelpText = "The Ardoq host")]
 		public String HostName { get; set; }
 
+		[Option ('r', "selfReference", Required = false, DefaultValue = false,
+			HelpText = "Allow self references (not fully supported in Ardoq.)")]
+		public bool SelfReference { get; set; }
+
+
+		[Option ('s', "skipMethods", Required = false, DefaultValue = false,
+			HelpText = "Don't add Method pages")]
+		public bool SkipAddMethodToDocs { get; set; }
+
 		[Option ('i', "opcodeInstruction", Required = false, DefaultValue = true,
 			HelpText = "Analyse OpCode instructions in methods")]
 		public bool AddInstructionReferences { get; set; }
 
-		[Option ('e', "storeExternalAssembly", Required = false, DefaultValue = true,
-			HelpText = "Store external assembly calls")]
-		public bool StoreExternalAssemblyDetail { get; set; }
+		[Option ('e', "skipStoreExternalAssembly", Required = false, DefaultValue = false,
+			HelpText = "Skip Store external assembly calls")]
+		public bool SkipStoreExternalAssemblyDetail { get; set; }
 
 		[Option ('d', "detail", Required = false, DefaultValue = false,
 			HelpText = "Include private members")]
@@ -165,11 +172,15 @@ namespace Ardoq
 			workspace.Views = views;
 
 			var currentAssembly = await getNamespaceComp (module.Assembly.Name.Name, workspace);
-			foreach (var c in module.AssemblyReferences) {
-				Console.WriteLine ("Adding Assembly " + c.Name);
-				var ws = await getWorkspace (c);
-				var nsc = await getNamespaceComp (c.Name, ws);
-				rep.AddReference (currentAssembly, nsc, "", model.GetReferenceTypeByName ("Uses"));
+
+			if (!SkipStoreExternalAssemblyDetail) {
+				foreach (var c in module.AssemblyReferences) {
+					Console.WriteLine ("Adding Assembly " + c.Name);
+					var ws = await getWorkspace (c);
+					ws.Views = views;
+					var nsc = await getNamespaceComp (c.Name, ws);
+					AddReference (currentAssembly, nsc, "", model.GetReferenceTypeByName ("Uses"));
+				}
 			}
 
 
@@ -190,7 +201,7 @@ namespace Ardoq
 						if (!iface.Namespace.StartsWith ("System")) {
 							var interfaceComp = await getTypeReferenceComp (iface);
 							if (interfaceComp != null)
-								rep.AddReference (typeComp, interfaceComp, "", model.GetReferenceTypeByName ("Implements"));
+								AddReference (typeComp, interfaceComp, "", model.GetReferenceTypeByName ("Implements"));
 						}
 					}
 
@@ -198,7 +209,7 @@ namespace Ardoq
 				if (type.BaseType != null && !type.BaseType.Namespace.StartsWith ("System")) {
 					var interfaceComp = await getTypeReferenceComp (type.BaseType);
 					if (interfaceComp != null)
-						rep.AddReference (typeComp, interfaceComp, "", model.GetReferenceTypeByName ("Extends"));
+						AddReference (typeComp, interfaceComp, "", model.GetReferenceTypeByName ("Extends"));
 				}
 				if (type.HasProperties) {
 					foreach (var f in type.Properties) {
@@ -206,12 +217,12 @@ namespace Ardoq
 							if (!f.PropertyType.Namespace.StartsWith ("System")) {
 								var fieldComp = await getTypeReferenceComp (f.PropertyType);
 								if (fieldComp != null)
-									rep.AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
+									AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
 							} else {
 								//System dep, let's just add a ref to namespace.
 								var fieldComp = rep.GetComp (f.PropertyType.Scope.Name);
 								if (fieldComp != null) {
-									rep.AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
+									AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
 								}
 							}
 						}
@@ -223,12 +234,12 @@ namespace Ardoq
 							if (!df.FieldType.Namespace.StartsWith ("System")) {
 								var fieldComp = await getTypeReferenceComp (df.FieldType);
 								if (fieldComp != null)
-									rep.AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
+									AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
 							} else {
 								//System dep, let's just add a ref to namespace.
 								var fieldComp = await getNamespaceComp (df.FieldType);
 								if (fieldComp != null) {
-									rep.AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
+									AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
 								}
 							}
 						}
@@ -253,7 +264,6 @@ namespace Ardoq
 							methodComp = await addMethodComp (method, typeComp);
 						} else {
 							methodComp = typeComp;
-
 						}
 						methodInfo.Append ("(");
 						if (method.HasParameters) {
@@ -285,12 +295,13 @@ namespace Ardoq
 									if (f.VariableType != null && f.VariableType.DeclaringType != null) {
 										if (!f.VariableType.Namespace.StartsWith ("System")) {
 											var fieldComp = await getTypeReferenceComp (f.VariableType.DeclaringType);
-											rep.AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
+											if (fieldComp != null)
+												AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
 										} else {
 											//System dep, let's just add a ref to namespace.
 											var fieldComp = rep.GetComp (f.VariableType.Scope.Name);
 											if (fieldComp != null) {
-												rep.AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
+												AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
 											}
 										}
 									}
@@ -348,7 +359,7 @@ namespace Ardoq
 
 		}
 
-		async Task<Workspace> getWorkspace (AssemblyNameReference c)
+		public async Task<Workspace> getWorkspace (AssemblyNameReference c)
 		{
 			var name = getAssemblyWorkspaceName (c);
 			if (!assemblyWorkspaceMap.ContainsKey (name)) {
@@ -362,12 +373,12 @@ namespace Ardoq
 		}
 
 
-		String getAssemblyWorkspaceName (AssemblyNameReference anr)
+		public String getAssemblyWorkspaceName (AssemblyNameReference anr)
 		{
 			return anr.Name + " " + anr.Version;
 		}
 
-		async Task<bool> addOpCodeRef (object o, Component mcomp, int order)
+		public async Task<bool> addOpCodeRef (object o, Component mcomp, int order)
 		{
 
 			if (o is MethodDefinition) {
@@ -385,8 +396,11 @@ namespace Ardoq
 					if (declaringComp != null) {
 						var methodRef = await addMethodComp (md, declaringComp);
 						if (methodRef != null) {
-							var reference = rep.AddReference
+							var reference = AddReference
 								(mcomp, methodRef, "Method call", model.GetReferenceTypeByName ("Calls"));
+							if (reference == null) {
+								return true;
+							}
 							string description = "";
 							if (md.HasParameters) {
 								foreach (var param in md.Parameters) {
@@ -415,7 +429,7 @@ namespace Ardoq
 			return true;
 		}
 
-		private string MakeMarkup (String value)
+		public  string MakeMarkup (String value)
 		{
 			if (!String.IsNullOrEmpty (value)) {
 				return value.Replace ("<", "&lt;").Replace (">", "&gt;").Replace ("`", "\\`");
@@ -426,8 +440,11 @@ namespace Ardoq
 		Regex GetterAndSetterFix = new Regex (".*? (.*)\\(.+");
 		Regex GetterAndSetterRemoveVerb = new Regex (".et_");
 
-		private async Task<Component> addMethodComp (MethodReference mr, Component typeComp)
+		public  async Task<Component> addMethodComp (MethodReference mr, Component typeComp)
 		{
+			if (SkipAddMethodToDocs) {
+				return typeComp;
+			}
 			var fullName = mr.FullName;
 			var shortName = mr.Name;
 
@@ -450,16 +467,16 @@ namespace Ardoq
 		}
 
 
-		private async Task<bool> addParameterRef (ParameterDefinition at, Component typeComp)
+		public  async Task<bool> addParameterRef (ParameterDefinition at, Component typeComp)
 		{
 			var componentTarget = await getParameterComp (at);
 			if (componentTarget != null) {
-				rep.AddReference (typeComp, componentTarget, "Parameter reference.", model.GetReferenceTypeByName ("Uses"));
+				AddReference (typeComp, componentTarget, "Parameter reference.", model.GetReferenceTypeByName ("Uses"));
 			}
 			return true;
 		}
 
-		private async Task<Component> getParameterComp (ParameterDefinition at)
+		public  async Task<Component> getParameterComp (ParameterDefinition at)
 		{
 			if (!at.ParameterType.Namespace.StartsWith ("System") && !at.ParameterType.IsGenericInstance && !at.ParameterType.IsGenericParameter) {
 				var componentTarget = await getTypeReferenceComp (at.ParameterType);
@@ -470,30 +487,30 @@ namespace Ardoq
 			return null;
 		}
 
-		private void addAttributeRef (CustomAttribute at, Component typeComp)
+		public  void addAttributeRef (CustomAttribute at, Component typeComp)
 		{
 			var componentTarget = rep.GetComp (at.AttributeType.FullName);
 			componentTarget = (componentTarget != null) ? componentTarget : rep.GetComp (at.AttributeType.Namespace);
 			componentTarget = (componentTarget != null) ? componentTarget : rep.GetComp (at.AttributeType.Scope.Name);
 			if (componentTarget != null) {
-				rep.AddReference (typeComp, componentTarget, "Attribute reference.", model.GetReferenceTypeByName ("Uses"));
+				AddReference (typeComp, componentTarget, "Attribute reference.", model.GetReferenceTypeByName ("Uses"));
 			}
 		}
 
-		private async void addRestService (CustomAttribute at, Component typeComp)
+		public  async void addRestService (CustomAttribute at, Component typeComp)
 		{
 			if (at.AttributeType.FullName.StartsWith ("Refit.")) {
 				var service = MakeMarkup (at.ConstructorArguments [0].Value.ToString ());
 				var operation = MakeMarkup (at.AttributeType.Name.Replace ("Attribute", "").ToLower ());
 				var parentComp = await rep.AddComp (service, new Component (service, workspace.Id, "", model.GetComponentTypeByName ("Service")));
 				var comp = await rep.AddComp (service + operation, new Component (operation, workspace.Id, "", model.GetComponentTypeByName ("Operation")), parentComp);
-				rep.AddReference (typeComp, comp, operation, model.GetReferenceTypeByName ("Uses"));
+				AddReference (typeComp, comp, operation, model.GetReferenceTypeByName ("Uses"));
 
 				Console.WriteLine (operation + " " + service);
 			}
 		}
 
-		private async Task<Component> getTypeReferenceComp (TypeReference tr)
+		public  async Task<Component> getTypeReferenceComp (TypeReference tr)
 		{
 			var td = tr;
 			if (td.IsArray) {
@@ -506,8 +523,11 @@ namespace Ardoq
 				return null;
 
 			}
-
+			
 			var ws = await getWorkspaceComp (td);
+			if (ws == null) {
+				return null;
+			}
 
 			var namespaceComp = await getNamespaceComp (td, ws);
 			if (namespaceComp == null) {
@@ -534,7 +554,7 @@ namespace Ardoq
 			return comp;
 		}
 
-		object getIcon (TypeDefinition tdNew)
+		public object getIcon (TypeDefinition tdNew)
 		{
 			var type = "building";
 			if (tdNew.IsEnum)
@@ -547,7 +567,7 @@ namespace Ardoq
 			return type;
 		}
 
-		object GetObjectType (TypeDefinition tdNew)
+		public object GetObjectType (TypeDefinition tdNew)
 		{
 			var type = "Class";
 			if (tdNew.IsEnum)
@@ -560,7 +580,7 @@ namespace Ardoq
 			return type;
 		}
 
-		void addField (Component comp, string fieldName, object fieldValue)
+		public void addField (Component comp, string fieldName, object fieldValue)
 		{
 			if (comp.Fields.ContainsKey (fieldName)) {
 				comp.Fields [fieldName] = fieldValue;
@@ -569,40 +589,57 @@ namespace Ardoq
 			}
 		}
 
-		private async Task<Workspace> getWorkspaceComp (TypeReference td)
+		public async Task<Workspace> getWorkspaceComp (TypeReference td)
 		{
 			var ws = workspace;
 			if (td.Scope is AssemblyNameReference && td.Scope.Name != td.Module.Assembly.Name.Name) {
+				if (SkipStoreExternalAssemblyDetail) {
+					return null;
+				}
 				ws = await getWorkspace (td.Scope as AssemblyNameReference);
 			}
 			return ws;
 		}
 
-		private async  Task<Component> getNamespaceComp (TypeReference td)
+		public async  Task<Component> getNamespaceComp (TypeReference td)
 		{
 			var ws = await getWorkspaceComp (td);
+			if (ws == null) {
+				return null;
+			}
 			return await getNamespaceComp (td, ws);
 		}
 
-		private async  Task<Component> getNamespaceComp (TypeReference td, Workspace ws)
+		public async  Task<Component> getNamespaceComp (TypeReference td, Workspace ws)
 		{
 			var parentName = (td.IsNested) ? td.DeclaringType.Namespace : td.Namespace;
 			return await getNamespaceComp (parentName, ws);
 		}
 
-		private async  Task<Component> getNamespaceComp (String parentName, Workspace ws)
+		public async  Task<Component> getNamespaceComp (String parentName, Workspace ws)
 		{
 			var nsComp = (!String.IsNullOrEmpty (parentName)) ? await rep.AddComp (fixFullPathName (ws.Name + "/" + parentName), new Component (fixCompName (parentName), ws.Id, "", model.GetComponentTypeByName ("Namespace"))) : null;
 			return nsComp;
 		}
 
-		private String getFullPathName (TypeReference td)
+		Reference AddReference (Component source, Component target, string description, int type)
+		{
+			if (source == target && !SelfReference) {
+				if (!source.Description.Contains ("#selfReference")) {
+					source.Description += "\n #selfReference\n";
+				}
+				return null;
+			}
+			return rep.AddReference (source, target, description, type);
+		}
+
+		public String getFullPathName (TypeReference td)
 		{
 			var cFullName = (td.IsGenericInstance || td.IsGenericParameter) ? td.GetElementType ().FullName : td.FullName;
 			return fixFullPathName (cFullName);
 		}
 
-		private String fixCompName (String name)
+		public String fixCompName (String name)
 		{
 			var newName = MakeMarkup (RemoveTypeDif.Replace (fixName.Replace (name, "$1"), ""));
 			return newName;
@@ -611,14 +648,14 @@ namespace Ardoq
 		Regex RemoveTypeDif = new Regex ("`\\d+");
 
 
-		private String fixMethodPathName (string fullName)
+		public String fixMethodPathName (string fullName)
 		{
 			var newName = RemoveTypeDif.Replace (fullName, "").Replace ("<", "").Replace (">", "");
 			newName = MakeMarkup (newName);
 			return newName;
 		}
 
-		private String fixFullPathName (String fullName)
+		public String fixFullPathName (String fullName)
 		{
 			var newName = RemoveTypeDif.Replace ((fullName.Contains ("<") ? fixRegexDeclaration.Replace (fullName, "$1$2") : fullName), "");
 			newName = MakeMarkup (newName);
