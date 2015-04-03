@@ -12,20 +12,34 @@
       <File FileName="../ardoq-csharp-client/Ardoq/Service/ComponentService.cs" Line="1" Column="1" />
       <File FileName="../ardoq-csharp-client/Ardoq/Service/Interface/IComponentService.cs" Line="1" Column="1" />
       <File FileName="../ardoq-csharp-client/Ardoq/Service/AttachmentService.cs" Line="1" Column="1" />
-      <File FileName="../ardoq-csharp-client/Ardoq/Models/Model.cs" Line="3" Column="3" />
-      <File FileName="../ardoq-csharp-client/Ardoq/Models/Component.cs" Line="15" Column="15" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Model.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Component.cs" Line="1" Column="1" />
       <File FileName="../ardoq-csharp-client/Ardoq/Models/Converters/ComponentConverter.cs" Line="1" Column="1" />
-      <File FileName="../ardoq-csharp-client/Ardoq/Models/Reference.cs" Line="3" Column="3" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Reference.cs" Line="1" Column="1" />
       <File FileName="../ardoq-csharp-client/Ardoq/Service/WorkspaceService.cs" Line="1" Column="1" />
       <File FileName="../ardoq-csharp-client/Ardoq/Models/Workspace.cs" Line="1" Column="1" />
       <File FileName="../ardoq-csharp-client/Ardoq/Models/WorkspaceBranch.cs" Line="1" Column="1" />
       <File FileName="../ardoq-csharp-client/Ardoq/Models/WorkspaceBranchRequest.cs" Line="1" Column="1" />
       <File FileName="../ardoq-csharp-client/Ardoq/Service/Interface/IWorkspaceService.cs" Line="1" Column="1" />
-      <File FileName="../ardoq-csharp-client/Ardoq/Util/SyncRepository.cs" Line="1" Column="1" />
-      <File FileName="ardoq-cecil-inspection/Program.cs" Line="43" Column="43" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Util/SyncRepository.cs" Line="185" Column="63" />
+      <File FileName="ardoq-cecil-inspection/Program.cs" Line="172" Column="27" />
       <File FileName="../ardoq-csharp-client/Ardoq/Service/Interface/IDeprecatedModelService.cs" Line="1" Column="1" />
       <File FileName="ardoq-cecil-inspection/Resource/.NetModel.json" Line="1" Column="1" />
       <File FileName="../ardoq-csharp-client/Ardoq/RefitStubs.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/FieldService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/Interface/IFieldService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Message.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Tag.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Origin.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/Interface/INotifyService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/NotifyService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/ReferenceService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/ServiceBase.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/Interface/IReferenceService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/Interface/ITagService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/Interface/IFolderService.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Models/Folder.cs" Line="1" Column="1" />
+      <File FileName="../ardoq-csharp-client/Ardoq/Service/FolderService.cs" Line="80" Column="45" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
@@ -33,8 +47,8 @@
       <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/test/Program.cs" line="311" column="1" />
       <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/test/SyncRepository.cs" line="28" column="1" />
       <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/test/Program.cs" line="325" column="1" />
-      <Breakpoint conditionExpression="name.Contains(&quot;Consts&quot;)" file="/Users/magnulf/projects/ardoq-dotNet-doc/ardoq-cecil-inspection/Program.cs" line="1269" column="1" />
-      <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/ardoq-cecil-inspection/Program.cs" line="834" column="1" />
+      <Breakpoint conditionExpression="name.Contains(&quot;Consts&quot;)" file="/Users/magnulf/projects/ardoq-dotNet-doc/ardoq-cecil-inspection/Program.cs" line="1292" column="1" />
+      <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/ardoq-cecil-inspection/Program.cs" line="857" column="1" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />

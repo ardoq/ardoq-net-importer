@@ -20,7 +20,7 @@
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
     <Externalconsole>true</Externalconsole>
-    <Commandlineparameters>-h http://localhost:8080  -t 7e098874b0c844b095b06a1604af8217 -o shared -a Ardoq.dll -s -d -e -i </Commandlineparameters>
+    <Commandlineparameters>-h http://localhost:8080  -t 86480279652b4ba8813aabd66b6aaa09 -o shared -a Refit.dll -s -d  -i </Commandlineparameters>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <DebugType>full</DebugType>

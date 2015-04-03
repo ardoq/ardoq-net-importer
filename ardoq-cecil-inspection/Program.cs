@@ -67,10 +67,33 @@ namespace Ardoq
 			HelpText = "Include private members")]
 		public Boolean IncludePrivate { get; set; }
 
+		[Option ('n', "notifyMe", Required = false, DefaultValue = false,
+			HelpText = "Notify me by mail")]
+		public Boolean NotifyByMail { get; set; }
+
+		[Option ('f', "folderName", Required = false, DefaultValue = ".NET Assemblies",
+			HelpText = "Folder name, set to blank to ignore")]
+		public String FolderName { get; set; }
+
 		Dictionary<string, Workspace> assemblyWorkspaceMap = new Dictionary<string, Workspace> ();
 
 		Regex fixName = new Regex ("<{0,1}(.*?)>{0,1}");
 		Regex fixRegexDeclaration = new Regex ("(.*?)<{0,1}(.*?)>{0,1}.*");
+
+		String folderId = null;
+
+		List<string> views = new List<string> () {
+			"swimlane",
+			"sequence",
+			"reader",
+			"tagscape",
+			"tableview",
+			"treemap",
+			"componenttree",
+			"relationships",
+			"integrations",
+			"processflow"
+		};
 
 		[HelpOption]
 		public string GetUsage ()
@@ -117,7 +140,6 @@ namespace Ardoq
 			Console.WriteLine ("Connecting to: " + HostName);
 			Console.WriteLine (" - : " + Org);
 			var client = new ArdoqClient (new HttpClient (), HostName, Token, Org);
-
 			rep = new SyncRepository (client);
 			try {
 				model = await client.ModelService.GetModelByName (".Net");
@@ -146,10 +168,17 @@ namespace Ardoq
 						model.GetComponentTypeByName ("Method")
 					}, FieldType.Text));
 				}
-
-
 			}
 
+			if (FolderName != null && FolderName.Length > 1) {
+				try {
+					var folder = await client.FolderService.GetFolderByName (FolderName);
+					folderId = folder.Id;
+				} catch (InvalidOperationException) {
+					var folder = await client.FolderService.CreateFolder (FolderName);
+					folderId = folder.Id;
+				}
+			}
 			var module = ModuleDefinition.ReadModule (AssemblyPath);
 			var ad = module.Assembly;
 
@@ -157,19 +186,9 @@ namespace Ardoq
 			String wsName = this.getAssemblyWorkspaceName (module.Assembly.Name);
 			workspace = await rep.PrefetchWorkspace (wsName, model.Id);
 
-			List<string> views = new List<string> () {
-				"swimlane",
-				"sequence",
-				"reader",
-				"tagscape",
-				"tableview",
-				"treemap",
-				"componenttree",
-				"relationships",
-				"integrations",
-				"processflow"
-			};
+
 			workspace.Views = views;
+			workspace.Folder = folderId;
 
 			var currentAssembly = await getNamespaceComp (module.Assembly.Name.Name, workspace);
 
@@ -177,7 +196,6 @@ namespace Ardoq
 				foreach (var c in module.AssemblyReferences) {
 					Console.WriteLine ("Adding Assembly " + c.Name);
 					var ws = await getWorkspace (c);
-					ws.Views = views;
 					var nsc = await getNamespaceComp (c.Name, ws);
 					AddReference (currentAssembly, nsc, "", model.GetReferenceTypeByName ("Uses"));
 				}
@@ -353,7 +371,16 @@ namespace Ardoq
 			Console.WriteLine (rep.GetReport ());
 
 
+			if (NotifyByMail) {
+				try {
+					await client.NotifyService.PostMessage (new Message (".NET assembly is imported", "Your workspace " + workspace.Name + " is ready: " + HostName + "/app/view/workspace/" + workspace.Id + "?org=" + client.Org));	
+				} catch (Exception) {
+					Console.WriteLine ("Could not notify by mail.");
+				}
+			}
+
 			Console.WriteLine ("Your workspace '" + workspace.Name + "' is ready: " + HostName + "/app/view/workspace/" + workspace.Id);
+
 			//var ws = await client.WorkspaceService.GetWorkspaceById (workspace.Id);
 			return workspace;
 
@@ -363,7 +390,7 @@ namespace Ardoq
 		{
 			var name = getAssemblyWorkspaceName (c);
 			if (!assemblyWorkspaceMap.ContainsKey (name)) {
-				var ws = await rep.GetOrCreateWorkspace (name, model.Id);
+				var ws = await rep.GetOrCreateWorkspace (name, model.Id, folderId, views);
 				if (!assemblyWorkspaceMap.ContainsKey (name)) {
 					assemblyWorkspaceMap.Add (name, ws);
 				}
