@@ -131,54 +131,42 @@ namespace Ardoq
 
 		}
 
-
-
-
 		public async Task<Workspace> Run ()
 		{
-
 			Console.WriteLine ("Connecting to: " + HostName);
 			Console.WriteLine (" - : " + Org);
 			var client = new ArdoqClient (new HttpClient (), HostName, Token, Org);
 			rep = new SyncRepository (client);
-			try {
+		    model = null;
+			try 
+            {
 				model = await client.ModelService.GetModelByName (".Net");
-			} catch (InvalidOperationException) {
-				var myAssembly = Assembly.GetExecutingAssembly ();
-				var resourceName = "ardoq-cecil-inspection.Resource..NetModel.json";
-
-				using (Stream stream = myAssembly.GetManifestResourceStream (resourceName))
-				using (StreamReader reader = new StreamReader (stream)) {
-					Console.WriteLine ("Missing model, creating default model.");
-					string result = reader.ReadToEnd ();
-					model = await client.ModelService.UploadModel (result);
-					await client.FieldService.CreateField (new Field ("objectType", "Object type", model.Id, new List<String> () {
-						model.GetComponentTypeByName ("Namespace"),
-						model.GetComponentTypeByName ("Object"),
-						model.GetComponentTypeByName ("Method")
-					}, FieldType.Text));
-					await client.FieldService.CreateField (new Field ("nrOfMethods", "Nr of Methods", model.Id, new List<String> (){ model.GetComponentTypeByName ("Object") }, FieldType.Number));
-					await client.FieldService.CreateField (new Field ("nrOfFields", "Nr of Fields", model.Id, new List<String> (){ model.GetComponentTypeByName ("Object") }, FieldType.Number));
-					await client.FieldService.CreateField (new Field ("nrOfEvents", "Nr of Events", model.Id, new List<String> (){ model.GetComponentTypeByName ("Object") }, FieldType.Number));
-					await client.FieldService.CreateField (new Field ("nrOfInterfaces", "Nr of Interfaces", model.Id, new List<String> (){ model.GetComponentTypeByName ("Object") }, FieldType.Number));
-					await client.FieldService.CreateField (new Field ("nrOfCustomAttributes", "Nr of Custom Attributes", model.Id, new List<String> (){ model.GetComponentTypeByName ("Object") }, FieldType.Number));
-					await client.FieldService.CreateField (new Field ("_fullName", "Path", model.Id, new List<String> () {
-						model.GetComponentTypeByName ("Namespace"),
-						model.GetComponentTypeByName ("Object"),
-						model.GetComponentTypeByName ("Method")
-					}, FieldType.Text));
-				}
+			} 
+            catch (InvalidOperationException)
+            {
+                // Default model will be created
 			}
 
-			if (FolderName != null && FolderName.Length > 1) {
-				try {
+            if (model == null)
+                model = await CreateDefaultModel(client);
+
+		    folderId = null;
+			if (FolderName != null && FolderName.Length > 1) 
+            {
+				try 
+                {
 					var folder = await client.FolderService.GetFolderByName (FolderName);
 					folderId = folder.Id;
 				} catch (InvalidOperationException) {
-					var folder = await client.FolderService.CreateFolder (FolderName);
-					folderId = folder.Id;
+                    // Folder will be created not by name
 				}
-			}
+
+			    if (folderId == null)
+			    {
+                    var folder = await client.FolderService.CreateFolder(FolderName);
+                    folderId = folder.Id;
+                }
+            }
 			var module = ModuleDefinition.ReadModule (AssemblyPath);
 			var ad = module.Assembly;
 
@@ -385,6 +373,38 @@ namespace Ardoq
 			return workspace;
 
 		}
+
+	    private async Task<Model> CreateDefaultModel(ArdoqClient client)
+	    {
+            var myAssembly = Assembly.GetExecutingAssembly();
+            var resourceName = "ardoq-cecil-inspection.Resource.NetModel.json";
+
+            using (Stream stream = myAssembly.GetManifestResourceStream(resourceName))
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                Console.WriteLine("Missing model, creating default model.");
+                string result = reader.ReadToEnd();
+                var model = await client.ModelService.UploadModel(result);
+                await client.FieldService.CreateField(new Field("objectType", "Object type", model.Id, new List<String>() {
+						model.GetComponentTypeByName ("Namespace"),
+						model.GetComponentTypeByName ("Object"),
+						model.GetComponentTypeByName ("Method")
+					}, FieldType.Text));
+
+                await client.FieldService.CreateField(new Field("nrOfMethods", "Nr of Methods", model.Id, new List<String>() { model.GetComponentTypeByName("Object") }, FieldType.Number));
+                await client.FieldService.CreateField(new Field("nrOfFields", "Nr of Fields", model.Id, new List<String>() { model.GetComponentTypeByName("Object") }, FieldType.Number));
+                await client.FieldService.CreateField(new Field("nrOfEvents", "Nr of Events", model.Id, new List<String>() { model.GetComponentTypeByName("Object") }, FieldType.Number));
+                await client.FieldService.CreateField(new Field("nrOfInterfaces", "Nr of Interfaces", model.Id, new List<String>() { model.GetComponentTypeByName("Object") }, FieldType.Number));
+                await client.FieldService.CreateField(new Field("nrOfCustomAttributes", "Nr of Custom Attributes", model.Id, new List<String>() { model.GetComponentTypeByName("Object") }, FieldType.Number));
+                await client.FieldService.CreateField(new Field("_fullName", "Path", model.Id, new List<String>() {
+						model.GetComponentTypeByName ("Namespace"),
+						model.GetComponentTypeByName ("Object"),
+						model.GetComponentTypeByName ("Method")
+					}, FieldType.Text));
+
+                return model;
+            }
+        }
 
 		public async Task<Workspace> getWorkspace (AssemblyNameReference c)
 		{
