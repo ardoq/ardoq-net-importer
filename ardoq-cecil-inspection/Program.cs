@@ -168,12 +168,9 @@ namespace Ardoq
                 }
             }
 			var module = ModuleDefinition.ReadModule (AssemblyPath);
-			var ad = module.Assembly;
-
 
 			String wsName = this.getAssemblyWorkspaceName (module.Assembly.Name);
 			workspace = await rep.PrefetchWorkspace (wsName, model.Id);
-
 
 			workspace.Views = views;
 			workspace.Folder = folderId;
@@ -189,169 +186,9 @@ namespace Ardoq
 				}
 			}
 
-
-			foreach (TypeDefinition type in module.Types) {
-
-				if ((!type.IsPublic && IncludePrivate == false) || type.Name == "<Module>")
-					continue;
-
-
-				var typeComp = await getTypeReferenceComp (type);
-				if (typeComp == null) {
-					continue;
-				}
-				typeComp.Description = "";
-				Console.WriteLine (type.FullName);
-				if (type.HasInterfaces) {
-					foreach (var iface in type.Interfaces) {
-						if (!iface.Namespace.StartsWith ("System")) {
-							var interfaceComp = await getTypeReferenceComp (iface);
-							if (interfaceComp != null)
-								AddReference (typeComp, interfaceComp, "", model.GetReferenceTypeByName ("Implements"));
-						}
-					}
-
-				}
-				if (type.BaseType != null && !type.BaseType.Namespace.StartsWith ("System")) {
-					var interfaceComp = await getTypeReferenceComp (type.BaseType);
-					if (interfaceComp != null)
-						AddReference (typeComp, interfaceComp, "", model.GetReferenceTypeByName ("Extends"));
-				}
-				if (type.HasProperties) {
-					foreach (var f in type.Properties) {
-						if (f.PropertyType != null) {
-							if (!f.PropertyType.Namespace.StartsWith ("System")) {
-								var fieldComp = await getTypeReferenceComp (f.PropertyType);
-								if (fieldComp != null)
-									AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
-							} else {
-								//System dep, let's just add a ref to namespace.
-								var fieldComp = rep.GetComp (f.PropertyType.Scope.Name);
-								if (fieldComp != null) {
-									AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
-								}
-							}
-						}
-					}
-				}
-				if (type.HasFields) {
-					foreach (var df in type.Fields) {
-						if (df.FieldType != null) {
-							if (!df.FieldType.Namespace.StartsWith ("System")) {
-								var fieldComp = await getTypeReferenceComp (df.FieldType);
-								if (fieldComp != null)
-									AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
-							} else {
-								//System dep, let's just add a ref to namespace.
-								var fieldComp = await getNamespaceComp (df.FieldType);
-								if (fieldComp != null) {
-									AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
-								}
-							}
-						}
-					}
-				}
-				if (type.HasMethods) {
-					StringBuilder constructors = new StringBuilder ();
-					StringBuilder methods = new StringBuilder ();
-					Component methodComp = typeComp;
-					foreach (var method in type.Methods) {
-						StringBuilder methodInfo = new StringBuilder ();
-						methodInfo.Append ("####");
-						if (method.IsConstructor) {
-							methodInfo.Append ("new ");
-							methodInfo.Append (type.Name);
-						} else {
-							methodInfo.Append (method.ReturnType.Name);
-							methodInfo.Append (" ");
-							methodInfo.Append (method.Name);
-						}
-						if (!method.IsConstructor && (method.IsPublic || IncludePrivate)) {
-							methodComp = await addMethodComp (method, typeComp);
-						} else {
-							methodComp = typeComp;
-						}
-						methodInfo.Append ("(");
-						if (method.HasParameters) {
-							foreach (var p in method.Parameters) {
-								methodInfo.Append (p.ParameterType.FullName);
-								methodInfo.Append (" ");
-								methodInfo.Append (p.Name);
-								methodInfo.Append (", ");
-								await addParameterRef (p, methodComp);
-							}
-							methodInfo.Remove (methodInfo.Length - 2, 1);
-						}
-						methodInfo.AppendLine (")");
-
-
-						//Console.WriteLine ("-" + method.Name);
-						if (method.HasCustomAttributes) {
-							foreach (var at in method.CustomAttributes) {
-								/*if (!at.AttributeType.Name.Equals ("CompilerGeneratedAttribute") && !at.AttributeType.FullName.StartsWith ("System")) {
-									addRestService (at, methodComp);
-									addAttributeRef (at, methodComp);
-									//Console.WriteLine ("==" + at.AttributeType.FullName + " - " + at.AttributeType.GenericParameters);
-								}*/
-							}
-						}
-						if (method.HasBody) {
-							if (method.Body.HasVariables) {
-								foreach (var f in method.Body.Variables) {
-									if (f.VariableType != null && f.VariableType.DeclaringType != null) {
-										if (!f.VariableType.Namespace.StartsWith ("System")) {
-											var fieldComp = await getTypeReferenceComp (f.VariableType.DeclaringType);
-											if (fieldComp != null)
-												AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
-										} else {
-											//System dep, let's just add a ref to namespace.
-											var fieldComp = rep.GetComp (f.VariableType.Scope.Name);
-											if (fieldComp != null) {
-												AddReference (typeComp, fieldComp, "", model.GetReferenceTypeByName ("Uses"));
-											}
-										}
-									}
-								}
-							}
-							if (AddInstructionReferences) {
-								foreach (var inst in method.Body.Instructions) {
-									if (inst.OpCode.Name.IndexOf ("ldloca.s") > -1 && inst.Operand is VariableDefinition) {
-										var mbr = inst.Operand as VariableDefinition;
-										if (mbr.VariableType is TypeDefinition) {
-											var vttd = mbr.VariableType as TypeDefinition;
-											foreach (var opm in vttd.Methods) {
-												if (opm.HasBody) {
-													foreach (var newInst in opm.Body.Instructions) {
-														if (newInst.OpCode.Name.IndexOf ("call") > -1) {
-															await addOpCodeRef (newInst.Operand, methodComp, newInst.Offset);
-														}
-													}
-												}
-
-											}
-										}
-
-									} else if (inst.OpCode.Name.IndexOf ("call") > -1) {
-										await addOpCodeRef (inst.Operand, methodComp, inst.Offset);
-									}
-
-								}
-							}
-						}
-
-						if (method.IsConstructor) {
-							constructors.AppendLine (methodInfo.ToString ()); 
-						} else {
-							methods.AppendLine (methodInfo.ToString ()); 
-						}
-
-					}
-
-					typeComp.Description += "###Constructors\n" + constructors.ToString () + "###Methods\n" + methods.ToString ();
-
-				}
-
-				typeComp.Description = MakeMarkup (typeComp.Description);
+			foreach (var type in module.Types)
+			{
+			    await ProcessModuleType(type);
 			}
 
 			await rep.Save ();
@@ -374,13 +211,55 @@ namespace Ardoq
 
 		}
 
-	    private async Task<Model> CreateDefaultModel(ArdoqClient client)
+	    private async Task ProcessModuleType(TypeDefinition type)
 	    {
+            if ((!type.IsPublic && IncludePrivate == false) || type.Name == "<Module>")
+                return;
+
+            var typeComp = await getTypeReferenceComp(type);
+            if (typeComp == null)
+            {
+                return;
+            }
+
+            typeComp.Description = string.Empty;
+            Console.WriteLine(type.FullName);
+
+            if (type.HasInterfaces)
+            {
+                await ProcessTypeInterfaces(type, typeComp);
+            }
+
+            if (type.BaseType != null && !type.BaseType.Namespace.StartsWith("System"))
+            {
+                await ProcessSystemBaseType(type, typeComp);
+            }
+
+            if (type.HasProperties)
+            {
+                await ProcessTypeProperties(type, typeComp);
+            }
+
+            if (type.HasFields)
+            {
+                await ProcessTypeFields(type, typeComp);
+            }
+
+            if (type.HasMethods)
+            {
+                await ProcessTypeMethods(type, typeComp);
+            }
+
+            typeComp.Description = MakeMarkup(typeComp.Description);
+        }
+
+	    private async Task<Model> CreateDefaultModel(ArdoqClient client)
+        {
             var myAssembly = Assembly.GetExecutingAssembly();
             var resourceName = "ardoq-cecil-inspection.Resource.NetModel.json";
 
-            using (Stream stream = myAssembly.GetManifestResourceStream(resourceName))
-            using (StreamReader reader = new StreamReader(stream))
+            using (var stream = myAssembly.GetManifestResourceStream(resourceName))
+            using (var reader = new StreamReader(stream))
             {
                 Console.WriteLine("Missing model, creating default model.");
                 string result = reader.ReadToEnd();
@@ -391,22 +270,274 @@ namespace Ardoq
 						model.GetComponentTypeByName ("Method")
 					}, FieldType.Text));
 
-                await client.FieldService.CreateField(new Field("nrOfMethods", "Nr of Methods", model.Id, new List<String>() { model.GetComponentTypeByName("Object") }, FieldType.Number));
-                await client.FieldService.CreateField(new Field("nrOfFields", "Nr of Fields", model.Id, new List<String>() { model.GetComponentTypeByName("Object") }, FieldType.Number));
-                await client.FieldService.CreateField(new Field("nrOfEvents", "Nr of Events", model.Id, new List<String>() { model.GetComponentTypeByName("Object") }, FieldType.Number));
-                await client.FieldService.CreateField(new Field("nrOfInterfaces", "Nr of Interfaces", model.Id, new List<String>() { model.GetComponentTypeByName("Object") }, FieldType.Number));
-                await client.FieldService.CreateField(new Field("nrOfCustomAttributes", "Nr of Custom Attributes", model.Id, new List<String>() { model.GetComponentTypeByName("Object") }, FieldType.Number));
-                await client.FieldService.CreateField(new Field("_fullName", "Path", model.Id, new List<String>() {
-						model.GetComponentTypeByName ("Namespace"),
-						model.GetComponentTypeByName ("Object"),
-						model.GetComponentTypeByName ("Method")
-					}, FieldType.Text));
+                var fields = new Field[]
+                {
+                    new Field("nrOfMethods", "Nr of Methods", model.Id,
+                        new List<String>() {model.GetComponentTypeByName("Object")}, FieldType.Number),
+                    new Field("nrOfFields", "Nr of Fields", model.Id,
+                        new List<String>() {model.GetComponentTypeByName("Object")}, FieldType.Number),
+                    new Field("nrOfEvents", "Nr of Events", model.Id,
+                        new List<String>() {model.GetComponentTypeByName("Object")}, FieldType.Number),
+                    new Field("nrOfInterfaces", "Nr of Interfaces", model.Id,
+                        new List<String>() {model.GetComponentTypeByName("Object")}, FieldType.Number),
+                    new Field("nrOfCustomAttributes", "Nr of Custom Attributes", model.Id,
+                        new List<String>() {model.GetComponentTypeByName("Object")}, FieldType.Number),
+                    new Field("_fullName", "Path", model.Id, new List<String>()
+                    {
+                        model.GetComponentTypeByName("Namespace"),
+                        model.GetComponentTypeByName("Object"),
+                        model.GetComponentTypeByName("Method")
+                    }, FieldType.Text),
+                };
+
+                foreach (var field in fields)
+                {
+                    await client.FieldService.CreateField(field);
+                }
 
                 return model;
             }
         }
 
-		public async Task<Workspace> getWorkspace (AssemblyNameReference c)
+	    private async Task ProcessTypeInterfaces(TypeDefinition type, Component typeComp)
+	    {
+            foreach (var iface in type.Interfaces)
+            {
+                if (!iface.Namespace.StartsWith("System"))
+                {
+                    var interfaceComp = await getTypeReferenceComp(iface);
+                    if (interfaceComp != null)
+                        AddReference(typeComp, interfaceComp, "", model.GetReferenceTypeByName("Implements"));
+                }
+            }
+        }
+
+        private async Task ProcessSystemBaseType(TypeDefinition type, Component typeComp)
+        {
+            var interfaceComp = await getTypeReferenceComp(type.BaseType);
+            if (interfaceComp != null)
+                AddReference(typeComp, interfaceComp, "", model.GetReferenceTypeByName("Extends"));
+        }
+
+        private async Task ProcessTypeProperties(TypeDefinition type, Component typeComp)
+        {
+            foreach (var f in type.Properties)
+            {
+                if (f.PropertyType != null)
+                {
+                    if (!f.PropertyType.Namespace.StartsWith("System"))
+                    {
+                        var fieldComp = await getTypeReferenceComp(f.PropertyType);
+                        if (fieldComp != null)
+                            AddReference(typeComp, fieldComp, "", model.GetReferenceTypeByName("Uses"));
+                    }
+                    else
+                    {
+                        //System dep, let's just add a ref to namespace.
+                        var fieldComp = rep.GetComp(f.PropertyType.Scope.Name);
+                        if (fieldComp != null)
+                        {
+                            AddReference(typeComp, fieldComp, "", model.GetReferenceTypeByName("Uses"));
+                        }
+                    }
+                }
+            }
+        }
+
+        private async Task ProcessTypeFields(TypeDefinition type, Component typeComp)
+        {
+            foreach (var df in type.Fields)
+            {
+                if (df.FieldType != null)
+                {
+                    if (!df.FieldType.Namespace.StartsWith("System"))
+                    {
+                        var fieldComp = await getTypeReferenceComp(df.FieldType);
+                        if (fieldComp != null)
+                            AddReference(typeComp, fieldComp, "", model.GetReferenceTypeByName("Uses"));
+                    }
+                    else
+                    {
+                        //System dep, let's just add a ref to namespace.
+                        var fieldComp = await getNamespaceComp(df.FieldType);
+                        if (fieldComp != null)
+                        {
+                            AddReference(typeComp, fieldComp, "", model.GetReferenceTypeByName("Uses"));
+                        }
+                    }
+                }
+            }
+        }
+
+        private async Task ProcessTypeMethods(TypeDefinition type, Component typeComp)
+        {
+            var constructors = new StringBuilder();
+            var methods = new StringBuilder();
+
+            foreach (var method in type.Methods)
+            {
+                var methodComp = (!method.IsConstructor && (method.IsPublic || IncludePrivate))
+                    ? await addMethodComp(method, typeComp)
+                    : typeComp;
+
+                await ProcessTypeMethod(type, typeComp, method, methodComp, constructors, methods);
+            }
+
+            typeComp.Description += "###Constructors\n" + constructors.ToString() + "###Methods\n" + methods.ToString();
+        }
+
+	    private async Task ProcessTypeMethod(TypeDefinition type, Component typeComp, MethodDefinition method, Component methodComp, 
+            StringBuilder constructors, StringBuilder methods)
+	    {
+            var methodInfo = new StringBuilder();
+
+	        await ProcessMethodHeader(type, method, methodInfo);
+
+            if (method.HasParameters)
+            {
+                await ProcessMethodParameters(method, methodComp, methodInfo);
+            }
+            methodInfo.AppendLine(")");
+
+            //Console.WriteLine ("-" + method.Name);
+            if (method.HasCustomAttributes)
+            {
+                await ProcessMethodCustomAttirbutes(method, methodComp);
+            }
+
+            if (method.HasBody)
+            {
+                await ProcessMethodBody(type, typeComp, method, methodComp, methodInfo);
+            }
+
+            if (method.IsConstructor)
+            {
+                constructors.AppendLine(methodInfo.ToString());
+            }
+            else
+            {
+                methods.AppendLine(methodInfo.ToString());
+            }
+        }
+
+        private async Task ProcessMethodHeader(TypeDefinition type, MethodDefinition method, StringBuilder methodInfo)
+        {
+            methodInfo.Append("####");
+            if (method.IsConstructor)
+            {
+                methodInfo.Append("new ");
+                methodInfo.Append(type.Name);
+            }
+            else
+            {
+                methodInfo.Append(method.ReturnType.Name);
+                methodInfo.Append(" ");
+                methodInfo.Append(method.Name);
+            }
+            methodInfo.Append("(");
+        }
+
+	    private async Task ProcessMethodParameters(MethodDefinition method, Component methodComp,
+            StringBuilder methodInfo)
+	    {
+            foreach (var p in method.Parameters)
+            {
+                methodInfo.Append(p.ParameterType.FullName);
+                methodInfo.Append(" ");
+                methodInfo.Append(p.Name);
+                methodInfo.Append(", ");
+                await addParameterRef(p, methodComp);
+            }
+            methodInfo.Remove(methodInfo.Length - 2, 1);
+        }
+
+        private async Task ProcessMethodCustomAttirbutes(MethodDefinition method, Component methodComp)
+        {
+            foreach (var at in method.CustomAttributes)
+            {
+                /*if (!at.AttributeType.Name.Equals ("CompilerGeneratedAttribute") && !at.AttributeType.FullName.StartsWith ("System")) {
+                    addRestService (at, methodComp);
+                    addAttributeRef (at, methodComp);
+                    //Console.WriteLine ("==" + at.AttributeType.FullName + " - " + at.AttributeType.GenericParameters);
+                }*/
+            }
+        }
+
+        private async Task ProcessMethodBody(TypeDefinition type, Component typeComp, 
+            MethodDefinition method, Component methodComp, StringBuilder methodInfo)
+        {
+            if (method.Body.HasVariables)
+            {
+                await ProcessBodyVariables(typeComp, method);
+            }
+
+            if (AddInstructionReferences)
+            {
+                await ProcessBodyInstructions(method, methodComp);
+            }
+        }
+
+        private async Task ProcessBodyVariables(Component typeComp, MethodDefinition method)
+        {
+            foreach (var f in method.Body.Variables)
+            {
+                if (f.VariableType != null && f.VariableType.DeclaringType != null)
+                {
+                    if (!f.VariableType.Namespace.StartsWith("System"))
+                    {
+                        var fieldComp = await getTypeReferenceComp(f.VariableType.DeclaringType);
+                        if (fieldComp != null)
+                            AddReference(typeComp, fieldComp, "", model.GetReferenceTypeByName("Uses"));
+                    }
+                    else
+                    {
+                        //System dep, let's just add a ref to namespace.
+                        var fieldComp = rep.GetComp(f.VariableType.Scope.Name);
+                        if (fieldComp != null)
+                        {
+                            AddReference(typeComp, fieldComp, "", model.GetReferenceTypeByName("Uses"));
+                        }
+                    }
+                }
+            }
+        }
+
+        private async Task ProcessBodyInstructions(MethodDefinition method, Component methodComp)
+        {
+            foreach (var inst in method.Body.Instructions)
+            {
+                if (inst.OpCode.Name.IndexOf("ldloca.s") > -1 && inst.Operand is VariableDefinition)
+                {
+                    var mbr = inst.Operand as VariableDefinition;
+                    if (mbr.VariableType is TypeDefinition)
+                    {
+                        var vttd = mbr.VariableType as TypeDefinition;
+                        foreach (var opm in vttd.Methods)
+                        {
+                            if (opm.HasBody)
+                            {
+                                foreach (var newInst in opm.Body.Instructions)
+                                {
+                                    if (newInst.OpCode.Name.IndexOf("call") > -1)
+                                    {
+                                        await addOpCodeRef(newInst.Operand, methodComp, newInst.Offset);
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+
+                }
+                else if (inst.OpCode.Name.IndexOf("call") > -1)
+                {
+                    await addOpCodeRef(inst.Operand, methodComp, inst.Offset);
+                }
+
+            }
+        }
+
+	    public async Task<Workspace> getWorkspace (AssemblyNameReference c)
 		{
 			var name = getAssemblyWorkspaceName (c);
 			if (!assemblyWorkspaceMap.ContainsKey (name)) {
@@ -418,7 +549,6 @@ namespace Ardoq
 			}
 			return assemblyWorkspaceMap [name];
 		}
-
 
 		public String getAssemblyWorkspaceName (AssemblyNameReference anr)
 		{
