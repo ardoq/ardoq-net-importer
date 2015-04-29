@@ -137,7 +137,7 @@ namespace Ardoq
             model = null;
             try
             {
-                model = await client.ModelService.GetModelByName(".Net", client.Org);
+                model = await client.ModelService.GetModelByName(".Net");
             }
             catch (InvalidOperationException)
             {
@@ -163,7 +163,7 @@ namespace Ardoq
                 if (folderId == null)
                 {
                     var folder = await client.FolderService.CreateFolder(
-                        new Folder(command.FolderName, ""), client.Org);
+                        new Folder(command.FolderName, ""));
                     folderId = folder.Id;
                 }
             }
@@ -181,14 +181,14 @@ namespace Ardoq
             {
                 Console.WriteLine("Missing model, creating default model.");
                 string result = reader.ReadToEnd();
-                var model = await client.ModelService.UploadModel(result, client.Org);
+                var model = await client.ModelService.UploadModel(result);
                 await
                     client.FieldService.CreateField(new Field("objectType", "Object type", model.Id, new List<String>()
                     {
                         model.GetComponentTypeByName("Namespace"),
                         model.GetComponentTypeByName("Object"),
                         model.GetComponentTypeByName("Method")
-                    }, FieldType.Text), client.Org);
+                    }, FieldType.Text));
 
                 var fields = new[]
                 {
@@ -212,7 +212,7 @@ namespace Ardoq
 
                 foreach (var field in fields)
                 {
-                    await client.FieldService.CreateField(field, client.Org);
+                    await client.FieldService.CreateField(field);
                 }
 
                 return model;
