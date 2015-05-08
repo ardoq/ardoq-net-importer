@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Ardoq.Formatter;
 using Mono.Cecil;
 using NUnit.Framework;
 using Moq;
@@ -16,14 +17,14 @@ namespace Ardoq.AssemblyInspection.Tests
     [TestFixture]
     public class InspectorTests
     {
-		Mock<Workspace> fakeWorkspace;
-		Mock<IModel> fakeModel;
-		Mock<SyncRepository> fakeRep;
+        Mock<Workspace> fakeWorkspace;
+        Mock<IModel> fakeModel;
+        Mock<SyncRepository> fakeRep;
 
-		public InspectorTests()
-		{
+        public InspectorTests()
+        {
             fakeWorkspace = new Mock<Workspace>("testWorkspace", "testComponentModel", "testDescription");
-			fakeModel = new Mock<IModel> ();
+            fakeModel = new Mock<IModel>();
 
             var fakeWorkspaceService = new Mock<IWorkspaceService>();
             var workspaces = new List<Workspace> { fakeWorkspace.Object };
@@ -45,35 +46,26 @@ namespace Ardoq.AssemblyInspection.Tests
             fakeClient.SetupGet(x => x.ComponentService).Returns(fakeComponentService.Object);
             fakeClient.SetupGet(x => x.ReferenceService).Returns(fakeReferenceService.Object);
 
-			fakeRep = new Mock<SyncRepository>(fakeClient.Object);
-		}
+            fakeRep = new Mock<SyncRepository>(fakeClient.Object);
+        }
 
         [Test]
         public async Task TypeTest()
         {
-			var module = ModuleDefinition.ReadModule(this.CallingAssemblyPath);
+            var assembly = Assembly.GetAssembly(typeof(ArdoqClient));
+            var module = ModuleDefinition.ReadModule(GetAssemblyPath(assembly));
             var options = new InspectionOptions();
             await fakeRep.Object.PrefetchWorkspace(string.Format("{0} {1}",
-                Assembly.GetCallingAssembly().GetName().Name, Assembly.GetCallingAssembly().GetName().Version), 
+                assembly.GetName().Name, assembly.GetName().Version),
                 fakeModel.Object.Id);
-			var assemblyInspector = new AssemblyInspector(fakeWorkspace.Object, module, fakeModel.Object, fakeRep.Object, options);
-			await assemblyInspector.InspectModuleAssemblies (fakeWorkspace.Object);
-
-            foreach (var type in module.Types)
-            {
-                await new TypeInspector(assemblyInspector, fakeWorkspace.Object, fakeModel.Object, fakeWorkspace.Object.Id, type, fakeRep.Object, options)
-                    .ProcessModuleType();
-            }
+            var assemblyInspector = new AssemblyInspector(fakeWorkspace.Object, module, fakeModel.Object, fakeRep.Object, options);
+            await assemblyInspector.InspectModuleAssemblies();
         }
 
-		public string CallingAssemblyPath
-		{
-			get
-			{
-				string codeBase = Assembly.GetCallingAssembly().CodeBase;
-				UriBuilder uri = new UriBuilder(codeBase);
-				return Uri.UnescapeDataString(uri.Path);
-			}
-		}
+        public string GetAssemblyPath(Assembly assembly)
+        {
+            var uri = new UriBuilder(assembly.CodeBase);
+            return Uri.UnescapeDataString(uri.Path);
+        }
     }
 }

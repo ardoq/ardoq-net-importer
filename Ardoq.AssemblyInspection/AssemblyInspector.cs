@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Ardoq.Fomatter;
+using Ardoq.Formatter;
 using Ardoq.Models;
 using Ardoq.Util;
 using Mono.Cecil;
@@ -20,6 +20,10 @@ namespace Ardoq.AssemblyInspection
         private readonly SyncRepository rep;
         private Workspace workspace;
         private readonly InspectionOptions options;
+
+        private readonly Regex fixName = new Regex("<{0,1}(.*?)>{0,1}");
+        private readonly Regex fixRegexDeclaration = new Regex("(.*?)<{0,1}(.*?)>{0,1}.*");
+        internal readonly Regex RemoveTypeDif = new Regex("`\\d+");
 
         public AssemblyInspector(Workspace workspace, ModuleDefinition module, IModel model, 
             SyncRepository rep, InspectionOptions options)
@@ -46,7 +50,7 @@ namespace Ardoq.AssemblyInspection
             return assemblyWorkspaceMap[name];
         }
 
-        public async Task InspectModuleAssemblies(Workspace workspace)
+        public async Task InspectModuleAssemblies()
         {
             var currentAssembly = await getNamespaceComp(module.Assembly.Name.Name, workspace);
 
@@ -60,42 +64,45 @@ namespace Ardoq.AssemblyInspection
                     rep.AddReference(currentAssembly, nsc, "", model.GetReferenceTypeByName("Uses"));
                 }
             }
+
+            await InspectModuleTypes();
         }
 
-        public String getAssemblyWorkspaceName(AssemblyNameReference anr)
+        public async Task InspectModuleTypes()
+        {
+            foreach (var type in module.Types)
+            {
+                await new TypeInspector(this, workspace, model, workspace.Id, type, rep, options)
+                    .InspectModuleType();
+            }
+        }
+
+        public string getAssemblyWorkspaceName(AssemblyNameReference anr)
         {
             return anr.Name + " " + anr.Version;
         }
 
-        Regex fixName = new Regex("<{0,1}(.*?)>{0,1}");
-        Regex fixRegexDeclaration = new Regex("(.*?)<{0,1}(.*?)>{0,1}.*");
-        Regex RemoveTypeDif = new Regex("`\\d+");
-
-        public async Task<Component> getNamespaceComp(String parentName, Workspace ws)
+        public async Task<Component> getNamespaceComp(string parentName, Workspace ws)
         {
-            var nsComp = (!String.IsNullOrEmpty(parentName)) ? await rep.AddComp(fixFullPathName(ws.Name + "/" + parentName),
-                new Component(fixCompName(parentName), ws.Id, "", model.GetComponentTypeByName("Namespace"))) : null;
+            var nsComp = (!String.IsNullOrEmpty(parentName)) 
+                ? await rep.AddComp(fixFullPathName(ws.Name + "/" + parentName),
+                    new Component(fixCompName(parentName), ws.Id, "", model.GetComponentTypeByName("Namespace"))) 
+                : null;
             return nsComp;
         }
 
-        public String fixCompName(String name)
+        public string fixCompName(string name)
         {
-            var newName = new Formatter().MakeMarkup(RemoveTypeDif.Replace(fixName.Replace(name, "$1"), ""));
-            return newName;
+            return FormatterUtils.MakeMarkup(
+                RemoveTypeDif.Replace(fixName.Replace(name, "$1"), ""));
         }
 
-        public String fixMethodPathName(string fullName)
+        public string fixFullPathName(string fullName)
         {
-            var newName = RemoveTypeDif.Replace(fullName, "").Replace("<", "").Replace(">", "");
-            newName = new Formatter().MakeMarkup(newName);
-            return newName;
-        }
-
-        public String fixFullPathName(String fullName)
-        {
-            var newName = RemoveTypeDif.Replace((fullName.Contains("<") ? fixRegexDeclaration.Replace(fullName, "$1$2") : fullName), "");
-            newName = new Formatter().MakeMarkup(newName);
-            return newName;
+            return FormatterUtils.MakeMarkup(
+                RemoveTypeDif.Replace((fullName.Contains("<") 
+                    ? fixRegexDeclaration.Replace(fullName, "$1$2") 
+                    : fullName), ""));
         }
 
     }

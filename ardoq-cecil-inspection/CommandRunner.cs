@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using Ardoq.AssemblyInspection;
+using Ardoq.Formatter;
 using Ardoq.Models;
 using Ardoq.Service.Interface;
 using Ardoq.Util;
@@ -64,13 +65,7 @@ namespace Ardoq
             };
 
             var assemblyInspector = new AssemblyInspector(workspace, module, model, rep, options);
-            await assemblyInspector.InspectModuleAssemblies(workspace);
-
-            foreach (var type in module.Types)
-            {
-                await new TypeInspector(assemblyInspector, workspace, model, workspace.Id, type, rep, options)
-                    .ProcessModuleType();
-            }
+            await assemblyInspector.InspectModuleAssemblies();
 
             await rep.Save();
             await rep.CleanUpMissingComps();

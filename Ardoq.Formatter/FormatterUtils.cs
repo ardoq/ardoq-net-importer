@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ardoq.Fomatter
+namespace Ardoq.Formatter
 {
-    public class Formatter
+    public static class FormatterUtils
     {
-        public string MakeMarkup(String value)
+        public static string MakeMarkup(String value)
         {
             if (!String.IsNullOrEmpty(value))
             {
