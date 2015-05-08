@@ -2,14 +2,7 @@
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
   <MonoDevelop.Ide.Workbench />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore>
-      <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/test/Program.cs" line="311" column="1" />
-      <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/test/SyncRepository.cs" line="28" column="1" />
-      <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/test/Program.cs" line="325" column="1" />
-      <Breakpoint conditionExpression="name.Contains(&quot;Consts&quot;)" file="/Users/magnulf/projects/ardoq-dotNet-doc/ardoq-cecil-inspection/Program.cs" line="1292" column="1" />
-      <Breakpoint file="/Users/magnulf/projects/ardoq-dotNet-doc/ardoq-cecil-inspection/Program.cs" line="857" column="1" />
-      <Breakpoint file="/Users/vagif/Documents/Projects/Git/Ardoq/ardoq-net-importer/Ardoq.AssemblyInspection.Tests/InspectorTests.cs" line="12" column="1" />
-    </BreakpointStore>
+    <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
 </Properties>
