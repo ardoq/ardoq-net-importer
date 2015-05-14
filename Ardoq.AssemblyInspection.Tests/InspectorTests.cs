@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using Ardoq.Formatter;
 using Mono.Cecil;
 using NUnit.Framework;
@@ -50,7 +52,7 @@ namespace Ardoq.AssemblyInspection.Tests
         }
 
         [Test]
-        public async Task TypeTest()
+        public async Task ArdoqClientTest()
         {
             var assembly = Assembly.GetAssembly(typeof(ArdoqClient));
             var module = ModuleDefinition.ReadModule(GetAssemblyPath(assembly));
@@ -58,7 +60,21 @@ namespace Ardoq.AssemblyInspection.Tests
             await fakeRep.Object.PrefetchWorkspace(string.Format("{0} {1}",
                 assembly.GetName().Name, assembly.GetName().Version),
                 fakeModel.Object.Id);
-            var assemblyInspector = new AssemblyInspector(fakeWorkspace.Object, module, fakeModel.Object, fakeRep.Object, options);
+            var assemblyInspector = new AssemblyInspector(fakeWorkspace.Object, module, null, fakeModel.Object, fakeRep.Object, options);
+            await assemblyInspector.InspectModuleAssemblies();
+        }
+
+        [Test]
+        public async Task NewtonsoftJsonTest()
+        {
+            var module = ModuleDefinition.ReadModule(@"..\..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll");
+            var options = new InspectionOptions();
+            await fakeRep.Object.PrefetchWorkspace(string.Format("{0} {1}",
+                "Newtonsoft.Json", "6.0.8"),
+                fakeModel.Object.Id);
+            var xmlDoc = new XmlDocument();
+            xmlDoc.Load(@"..\..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.xml");
+            var assemblyInspector = new AssemblyInspector(fakeWorkspace.Object, module, xmlDoc, fakeModel.Object, fakeRep.Object, options);
             await assemblyInspector.InspectModuleAssemblies();
         }
 

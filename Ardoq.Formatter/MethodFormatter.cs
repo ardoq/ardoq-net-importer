@@ -8,47 +8,61 @@ namespace Ardoq.Formatter
 {
     public class MethodFormatter
     {
-        private readonly StringBuilder textBuilder = new StringBuilder();
-
-        public MethodFormatter()
-        {
-        }
+        private readonly StringBuilder description = new StringBuilder();
+        private readonly StringBuilder definition = new StringBuilder();
 
         public string GetMethodInfo()
         {
-            return textBuilder.ToString();
+            var builder = new StringBuilder();
+            builder.Append(definition);
+            if (description.Length > 0)
+                builder.AppendLine(description.ToString());
+            return builder.ToString();
         }
 
-        public void WriteMethodHeader(string methodName, string declaringTypeName, string returnTypeName, 
-            bool isConstructor, IEnumerable<Tuple<string, string>> methodParameters)
+        public void WriteDescriptionInfo(string text, string caption = null)
         {
-            textBuilder.Append("####");
+            if (!string.IsNullOrEmpty(text))
+            {
+                if (!string.IsNullOrEmpty(caption))
+                    description.AppendLine("####" + caption);
+                description.AppendLine(text.Trim('\r', '\n', '\t', ' '));
+            }
+        }
+
+        public void WriteDefinitionInfo(string methodName, string declaringTypeName, string returnTypeName, 
+            bool isConstructor, bool isProperty, IEnumerable<Tuple<string, string>> methodParameters)
+        {
+            definition.Append("####");
             if (isConstructor)
             {
-                textBuilder.Append("new ");
-                textBuilder.Append(declaringTypeName);
+                definition.Append("new ");
+                definition.Append(declaringTypeName);
             }
             else
             {
-                textBuilder.Append(returnTypeName);
-                textBuilder.Append(" ");
-                textBuilder.Append(methodName);
+                definition.Append(returnTypeName);
+                definition.Append(" ");
+                definition.Append(methodName);
             }
-            textBuilder.Append("(");
 
-            if (methodParameters != null && methodParameters.Any())
+            if (!isProperty)
             {
-                foreach (var p in methodParameters)
+                definition.Append("(");
+                if (methodParameters != null && methodParameters.Any())
                 {
-                    textBuilder.Append(p.Item2);
-                    textBuilder.Append(" ");
-                    textBuilder.Append(p.Item1);
-                    textBuilder.Append(", ");
+                    foreach (var p in methodParameters)
+                    {
+                        definition.Append(p.Item2);
+                        definition.Append(" ");
+                        definition.Append(p.Item1);
+                        definition.Append(", ");
+                    }
+                    definition.Remove(definition.Length - 2, 2);
                 }
-                textBuilder.Remove(textBuilder.Length - 2, 1);
+                definition.Append(")");
             }
-
-            textBuilder.AppendLine(")");
+            definition.AppendLine();
         }
     }
 }

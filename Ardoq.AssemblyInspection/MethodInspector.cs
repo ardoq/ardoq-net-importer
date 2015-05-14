@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
 using Ardoq.Formatter;
 using Ardoq.Models;
 using Ardoq.Util;
@@ -17,6 +18,7 @@ namespace Ardoq.AssemblyInspection
         private readonly AssemblyInspector assemblyInspector;
         private readonly TypeInspector typeInspector;
         private readonly Workspace workspace;
+        private readonly XmlDocument xmlDocumentation;
         private readonly IModel model;
         private readonly string workspaceId;
         private TypeDefinition type;
@@ -30,14 +32,15 @@ namespace Ardoq.AssemblyInspection
         private readonly Regex GetterAndSetterFix = new Regex(".*? (.*)\\(.+");
         private readonly Regex GetterAndSetterRemoveVerb = new Regex(".et_");
 
-        public MethodInspector(AssemblyInspector assemblyInspector, TypeInspector typeInspector, 
-            Workspace workspace, IModel model, string workspaceId,
+        public MethodInspector(AssemblyInspector assemblyInspector, TypeInspector typeInspector,
+            Workspace workspace, XmlDocument xmlDocumentation, IModel model, string workspaceId,
             TypeDefinition type, Component typeComp, MethodDefinition method, 
             SyncRepository rep, InspectionOptions options)
         {
             this.assemblyInspector = assemblyInspector;
             this.typeInspector = typeInspector;
             this.workspace = workspace;
+            this.xmlDocumentation = xmlDocumentation;
             this.model = model;
             this.workspaceId = workspaceId;
             this.type = type;
@@ -54,7 +57,24 @@ namespace Ardoq.AssemblyInspection
                 ? await addMethodComp(method)
                 : typeComp;
 
-            methodFormatter.WriteMethodHeader(method.Name, type.Name, method.ReturnType.Name, method.IsConstructor, 
+            if (xmlDocumentation != null)
+            {
+                var xmlDoc = xmlDocumentation.SelectSingleNode(GetXPathReference(method));
+                if (xmlDoc == null)
+                    xmlDoc = xmlDocumentation.SelectSingleNode(GetXPathReference(method, true));
+                if (xmlDoc != null)
+                {
+                    var node = xmlDoc.SelectSingleNode("summary");
+                    if (node != null)
+                        methodFormatter.WriteDescriptionInfo(node.InnerText);
+                    node = xmlDoc.SelectSingleNode("example");
+                    if (node != null)
+                        methodFormatter.WriteDescriptionInfo(node.InnerText, "Example");
+                }
+            }
+
+            methodFormatter.WriteDefinitionInfo(methodComp.Name, type.Name, method.ReturnType.Name, 
+                method.IsConstructor, method.IsGetter || method.IsSetter,
                 method.Parameters.Select(x => new Tuple<string, string>(x.Name, x.ParameterType.FullName)));
 
             if (method.HasParameters)
@@ -74,6 +94,33 @@ namespace Ardoq.AssemblyInspection
             }
 
             return methodFormatter.GetMethodInfo();
+        }
+
+        private string GetXPathReference(MethodDefinition method, bool includeParameters = false)
+        {
+            var methodName = method.Name;
+            if (method.IsGetter && methodName.StartsWith("get_") ||
+                method.IsSetter && methodName.StartsWith("set_"))
+            {
+                methodName = methodName.Remove(0, 4);
+            }
+            else if (method.IsConstructor && method.Name.StartsWith("."))
+            {
+                methodName = "#" + methodName.Remove(0, 1);
+            }
+            var methodPrefix = method.IsGetter || method.IsSetter ? "P" : "M";
+
+            if (method.IsGetter || method.IsSetter || !includeParameters)
+            {
+                return string.Format(@"//doc/members/member[@name=""{0}:{1}.{2}""]",
+                    methodPrefix, method.DeclaringType.FullName, methodName);
+            }
+            else
+            {
+                var methodParameters = string.Join(",", method.Parameters.Select(x => x.ParameterType.FullName));
+                return string.Format(@"//doc/members/member[@name=""{0}:{1}.{2}({3})""]",
+                    methodPrefix, method.DeclaringType.FullName, methodName, methodParameters);
+            }
         }
 
         private async Task InspectMethodParameters()

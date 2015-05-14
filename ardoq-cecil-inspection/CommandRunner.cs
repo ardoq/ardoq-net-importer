@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.Xml;
 using Ardoq.AssemblyInspection;
 using Ardoq.Formatter;
 using Ardoq.Models;
@@ -50,6 +51,12 @@ namespace Ardoq
             rep = new SyncRepository(client);
             var module = ModuleDefinition.ReadModule(command.AssemblyPath);
             var assemblyName = module.Assembly.Name;
+            XmlDocument xmlDocumentation = null;
+            if (!string.IsNullOrEmpty(command.XmlDocumentation))
+            {
+                xmlDocumentation = new XmlDocument();
+                xmlDocumentation.Load(command.XmlDocumentation);
+            }
             workspace = await rep.PrefetchWorkspace(string.Format("{0} {1}",
                 assemblyName.Name, assemblyName.Version), model.Id);
             workspace.Views = views;
@@ -64,7 +71,7 @@ namespace Ardoq
                 SkipExternalAssemblyDetails = command.SkipStoreExternalAssemblyDetail,
             };
 
-            var assemblyInspector = new AssemblyInspector(workspace, module, model, rep, options);
+            var assemblyInspector = new AssemblyInspector(workspace, module, xmlDocumentation, model, rep, options);
             await assemblyInspector.InspectModuleAssemblies();
 
             await rep.Save();

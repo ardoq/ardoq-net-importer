@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml;
 using Ardoq.Formatter;
 using Mono.Cecil;
 using Ardoq.Models;
@@ -13,17 +14,19 @@ namespace Ardoq.AssemblyInspection
     {
         private readonly AssemblyInspector assemblyInspector;
         private readonly Workspace workspace;
+        private readonly XmlDocument xmlDocumentation;
         private readonly IModel model;
         private readonly string workspaceId;
         private TypeDefinition type;
         private readonly SyncRepository rep;
         private readonly InspectionOptions options;
 
-        public TypeInspector(AssemblyInspector assemblyInspector, Workspace workspace, IModel model, string workspaceId, 
-            TypeDefinition type, SyncRepository rep, InspectionOptions options)
+        public TypeInspector(AssemblyInspector assemblyInspector, Workspace workspace, XmlDocument xmlDocumentation, 
+            IModel model, string workspaceId, TypeDefinition type, SyncRepository rep, InspectionOptions options)
         {
             this.assemblyInspector = assemblyInspector;
             this.workspace = workspace;
+            this.xmlDocumentation = xmlDocumentation;
             this.model = model;
             this.workspaceId = workspaceId;
             this.type = type;
@@ -146,10 +149,25 @@ namespace Ardoq.AssemblyInspection
         private async Task<string> InspectTypeMethods(Component typeComp)
         {
             var typeFormatter = new TypeFormatter();
+
+            if (xmlDocumentation != null)
+            {
+                var xmlDoc = xmlDocumentation.SelectSingleNode(GetXPathReference(type));
+                if (xmlDoc != null)
+                {
+                    var node = xmlDoc.SelectSingleNode("summary");
+                    if (node != null)
+                        typeFormatter.WriteDescriptionInfo(node.InnerText);
+                    node = xmlDoc.SelectSingleNode("example");
+                    if (node != null)
+                        typeFormatter.WriteDescriptionInfo(node.InnerText, "Example");
+                }
+            }
+            
             foreach (var method in type.Methods)
             {
-                var methodInfo = await new MethodInspector(assemblyInspector, this, workspace, model, workspace.Id, 
-                    type, typeComp, method, rep, options)
+                var methodInfo = await new MethodInspector(assemblyInspector, this, workspace, xmlDocumentation, 
+                    model, workspace.Id, type, typeComp, method, rep, options)
                     .InspectTypeMethod();
 
                 if (method.IsConstructor)
@@ -164,6 +182,11 @@ namespace Ardoq.AssemblyInspection
 
             typeComp.Description += typeFormatter.GetTypeInfo();
             return typeFormatter.GetTypeInfo();
+        }
+
+        private string GetXPathReference(TypeDefinition type)
+        {
+            return string.Format(@"//doc/members/member[@name=""T:{0}""]", type.FullName);
         }
 
         public async Task<Component> getTypeReferenceComp(TypeReference tr)

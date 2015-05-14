@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
 using Ardoq.Formatter;
 using Ardoq.Models;
 using Ardoq.Util;
@@ -16,20 +17,22 @@ namespace Ardoq.AssemblyInspection
     {
         private readonly Dictionary<string, Workspace> assemblyWorkspaceMap = new Dictionary<string, Workspace>();
         private readonly ModuleDefinition module;
+        private readonly XmlDocument xmlDocumentation;
         private readonly IModel model;
         private readonly SyncRepository rep;
-        private Workspace workspace;
+        private readonly Workspace workspace;
         private readonly InspectionOptions options;
 
         private readonly Regex fixName = new Regex("<{0,1}(.*?)>{0,1}");
         private readonly Regex fixRegexDeclaration = new Regex("(.*?)<{0,1}(.*?)>{0,1}.*");
         internal readonly Regex RemoveTypeDif = new Regex("`\\d+");
 
-        public AssemblyInspector(Workspace workspace, ModuleDefinition module, IModel model, 
-            SyncRepository rep, InspectionOptions options)
+        public AssemblyInspector(Workspace workspace, ModuleDefinition module, XmlDocument xmlDocumentation, 
+            IModel model, SyncRepository rep, InspectionOptions options)
         {
             this.workspace = workspace;
             this.module = module;
+            this.xmlDocumentation = xmlDocumentation;
             this.model = model;
             this.rep = rep;
             this.options = options;
@@ -72,7 +75,7 @@ namespace Ardoq.AssemblyInspection
         {
             foreach (var type in module.Types)
             {
-                await new TypeInspector(this, workspace, model, workspace.Id, type, rep, options)
+                await new TypeInspector(this, workspace, xmlDocumentation, model, workspace.Id, type, rep, options)
                     .InspectModuleType();
             }
         }

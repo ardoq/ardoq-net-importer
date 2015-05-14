@@ -15,6 +15,10 @@ namespace Ardoq
             HelpText = "Authentication token")]
         public string Token { get; set; }
 
+        [Option('x', "XmlDocumentation", Required = false,
+            HelpText = "XML documentation for the input assembly.")]
+        public string XmlDocumentation { get; set; }
+
 
         [Option('m', "model", Required = false, DefaultValue = ".Net",
             HelpText = "Name of different model, must be based on .Net")]
