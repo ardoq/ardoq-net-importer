@@ -1,8 +1,1 @@
-﻿<Properties StartupItem="ardoq-cecil-inspection/ardoq-cecil-inspection.csproj">
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench />
-  <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore />
-  </MonoDevelop.Ide.DebuggingService.Breakpoints>
-  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
-</Properties>
+﻿<Properties StartupItem="ardoq-cecil-inspection/ardoq-cecil-inspection.csproj" />
